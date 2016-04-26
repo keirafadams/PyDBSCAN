@@ -1,8 +1,8 @@
 '''
 MIT License
 
-Copyright (c) 2013 University of California, Santa Cruz
-Copyright (c) Ian F. Adams
+Copyright (c) 2013, Ian F. Adams, University of California, Santa Cruz
+Copyright (c) 2016,Ian F. Adams
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ SOFTWARE.
 # TODO rejigger to handle arbitrary dimensionality.
 # TODO, setup.py file
 
+import numpy as np
 import math
 
 #Types of data points
@@ -39,16 +40,24 @@ WHITE = 10
 GREY = 11
 BLACK = 12
 
-class D1_data_point:
+class DataPoint:
+    """
+    Heavy weight datapoint class. Meant to be clear and easy-ish to use,
+    not efficient :p.
+    """
     def __init__(self, location):
+        """
+        :param location: tuple describing the location on a plane, can be arbitrary dimensions
+        """
 
         self.loc = location
+        self.id = None
 
         #What type of datapoint is it, based on DBSCAN categorizations
         self.category = UNCATEGORIZED
 
-        #contains tuples, first is the distance, second is the datapoint related
-        #to that distance
+        # contains tuples, first element is the distance, second is the datapoint
+        # related to that distance
         self.distance_list = []
 
         #used to store core and border points within eps distance of the datapoint
@@ -71,19 +80,90 @@ class D1_data_point:
         self.parent = -1
         self.time = 0
 
+
+class DataPointCluster:
+    """
+    Stores our datapoints in a handy dandy central location with
+    extra functionality
+    """
+
+    def __init__(self):
+        self.data_list = []
+        self.dimensionality = None
+        self.distance_matrix = None
+        self.id_counter = 0
+
+    def add_datapoint(self, datapoint):
+        """
+        :param datapoint: object of DataPoint class
+        """
+
+
+        # make sure all the data points are of the same dimensionality
+        if self.dimensionality is None:
+            self.dimensionality = len(datapoint.loc)
+        elif self.dimensionality != len(datapoint.loc):
+            raise Exception("Inconsistent dimension! Added data point of "
+                            "dimension %s, but data list is of dimension %s  "
+                            % (len(datapoint.loc), self.dimensionality))
+
+
+        # Assign a unique ID to the data point
+        datapoint.id = self.id_counter
+        self.id_counter += 1
+
+        self.data_list.append(datapoint)
+
+    def create_distance_matrix(self):
+        """
+        Creates a distance matrix using the current list of data points, if a distance matrix
+        is already in existence, an error will be raised.
+
+        :raises: Exception, distance matrix already created
+        """
+        pass
+
+    def clear_distance_matrix(self):
+        """
+        Clear any distance matrix thats already been calculated
+        """
+        pass
+
+    def clear_datapoints(self):
+        """
+        Remove any data points in existence, does not clear existing distance matrix
+        """
+
+    def db_scan(self):
+        """
+        Run the DB Scan clustering algorithm
+        """
+        pass
+
+    def output_clusters(self):
+        """
+        Returns a list of lists, each list is a cluster
+        """
+
+
+
 #Expects an (potentially unordered) list of integers and or floats
 #epsilon (search radius for any given point)
 #and the min neighborhood size
 #returns dictionary of clusters, indexed by tuples denoting the start
 #and end value of the cluster
 def dim_1_dbscan(data_list, eps, nhood_size):
+    """
+    Run the DBScan Algorithm
+
+    """
 
     #stores the datapoints
     dp_list = []
 
     #put each point in the list into a 1D data point, and save that point in a list
     for entry in data_list:
-        new_dp = D1_data_point(entry)
+        new_dp = DataPoint(entry)
         dp_list.append(new_dp)
 
     #now create a list of distances from ALL points for each data point. Inefficient, but

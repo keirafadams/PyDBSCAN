@@ -40,6 +40,30 @@ WHITE = 10
 GREY = 11
 BLACK = 12
 
+def calc_distance(point_a, point_b):
+    """
+    calculates euclidean distance between two arbitrary points of n dimensions
+    Yes, I know others do it well, but this is my stupid learning project, dammit.
+
+    :param point_a: tuple describing point in space
+    :param point_b: tuple describing point in space
+
+    :raises Exception: if you try to calculate the distance between tuples
+    of different dimension
+    """
+
+    if len(point_a) != len(point_b):
+        raise Exception("Cannot calculate distance between points of"
+                        "differing dimensionality")
+
+
+    running_sum = 0
+    for index in range(len(point_a)):
+        running_sum += (point_a[index] - point_b[index]) ** 2
+    dist = math.sqrt(running_sum)
+
+    return dist
+
 class DataPoint:
     """
     Heavy weight datapoint class. Meant to be clear and easy-ish to use,
@@ -121,18 +145,41 @@ class DataPointCluster:
 
         :raises: Exception, distance matrix already created
         """
-        pass
+
+
+        # if we already created the matrix, oops, raise an error
+        if self.distance_matrix is not None:
+            raise Exception("Distance Matrix Already Created!")
+
+        # calculate size of, and create, empty distance matrix
+        num_dp = len(self.data_list)
+        self.distance_matrix = np.zeros(num_dp, num_dp)
+
+        # inefficient, n2, redundant work, but should be functional
+        for compare_from in self.data_list:
+            for compare_to in self.data_list:
+                point_a = compare_from.loc
+                point_b = compare_to.loc
+
+                dist = calc_distance(point_a, point_b)
+                self.distance_matrix[compare_from.id][compare_to.id] = dist
+
 
     def clear_distance_matrix(self):
         """
         Clear any distance matrix thats already been calculated
         """
-        pass
+
+        self.distance_matrix = None
+
+
 
     def clear_datapoints(self):
         """
         Remove any data points in existence, does not clear existing distance matrix
         """
+
+        self.data_list = []
 
     def db_scan(self):
         """
@@ -144,7 +191,7 @@ class DataPointCluster:
         """
         Returns a list of lists, each list is a cluster
         """
-
+        pass
 
 
 #Expects an (potentially unordered) list of integers and or floats
@@ -152,7 +199,7 @@ class DataPointCluster:
 #and the min neighborhood size
 #returns dictionary of clusters, indexed by tuples denoting the start
 #and end value of the cluster
-def dim_1_dbscan(data_list, eps, nhood_size):
+def dbscan(data_list, eps, nhood_size):
     """
     Run the DBScan Algorithm
 
@@ -171,196 +218,196 @@ def dim_1_dbscan(data_list, eps, nhood_size):
     print "Creating Distance Matrices..."
 
     for cur_dp in dp_list:
-        for compare_to_dp in dp_list:
+            for compare_to_dp in dp_list:
 
-            #pull out the positions of each
-            position_1 = cur_dp.loc
-            position_2 = compare_to_dp.loc
+                #pull out the positions of each
+                position_1 = cur_dp.loc
+                position_2 = compare_to_dp.loc
 
-            #difference/distance between them
-            dist=math.fabs(position_2-position_1)
-            distance_tuple=(dist,compare_to_dp)
-            cur_dp.distance_list.append(distance_tuple)
+                #difference/distance between them
+                dist=math.fabs(position_2-position_1)
+                distance_tuple=(dist,compare_to_dp)
+                cur_dp.distance_list.append(distance_tuple)
 
-        #now sort the distance list. This will provide some speedup when we are checking
-        # distances for categorizing the points
-        cur_dp.distance_list.sort()
-
-
-    #DEBUG
-    '''for dp in dp_list:
-        print "---INIT DP---:",dp.loc
-        for dist_tuple in dp.distance_list:
-            distance=dist_tuple[0]
-            compared_to_dp=dist_tuple[1]
-
-            print "Initial Point Location:",dp.loc
-            print "Compared to Point Location:",compared_to_dp.loc
-            print "Distance between calced:",distance
-            print "Distance between re-calced:",math.fabs(compared_to_dp.loc-dp.loc)
-            print ""
-
-        print "---"
-    exit()'''
+            #now sort the distance list. This will provide some speedup when we are checking
+            # distances for categorizing the points
+            cur_dp.distance_list.sort()
 
 
-    #Now, label all core points, that is, any point with at least nhood_size
-    #points within eps distance
-    print "Calculating Core Points..."
-    for dp in dp_list:
-        count_within_eps = 0
-        for distance_tuple in dp.distance_list:
-            distance = distance_tuple[0]
-            if distance <= eps:
-                count_within_eps += 1
+        #DEBUG
+        '''for dp in dp_list:
+            print "---INIT DP---:",dp.loc
+            for dist_tuple in dp.distance_list:
+                distance=dist_tuple[0]
+                compared_to_dp=dist_tuple[1]
+
+                print "Initial Point Location:",dp.loc
+                print "Compared to Point Location:",compared_to_dp.loc
+                print "Distance between calced:",distance
+                print "Distance between re-calced:",math.fabs(compared_to_dp.loc-dp.loc)
+                print ""
+
+            print "---"
+        exit()'''
 
 
-            if count_within_eps >= nhood_size:
-                dp.category = CORE
-                break
-
-    #Next, identify all the border points-that is, points that are not core, but
-    #are within eps of at least one core point
-    print "Calculating Border Points..."
-    for dp in dp_list:
-
-        #if its already been categorized as a core point, skip to the next datapoint
-        if dp.category == CORE:
-            continue
-
-        #if its not a core point, its uncategorized at this point, so examine
-        #the distances from other points
-        for distance_tuple in dp.distance_list:
-            dist = distance_tuple[0]
-            adj_point = distance_tuple[1]
-
-            #if its within eps of another core point break out as we can categorize it
-            if (dist <= eps) and (adj_point.category == CORE):
-                dp.category = BORDER
-                break
+        #Now, label all core points, that is, any point with at least nhood_size
+        #points within eps distance
+        print "Calculating Core Points..."
+        for dp in dp_list:
+            count_within_eps = 0
+            for distance_tuple in dp.distance_list:
+                distance = distance_tuple[0]
+                if distance <= eps:
+                    count_within_eps += 1
 
 
+                if count_within_eps >= nhood_size:
+                    dp.category = CORE
+                    break
 
-    print "Calculating Noise Points..."
-    #finally label all the noise points (any point not already flagged as core or border)
-    for dp in dp_list:
-        if dp.category == UNCATEGORIZED:
-            dp.category = NOISE
+        #Next, identify all the border points-that is, points that are not core, but
+        #are within eps of at least one core point
+        print "Calculating Border Points..."
+        for dp in dp_list:
 
-    #DEBUG
-    '''for dp in dp_list:
-        print "-----"
-        print dp.loc
-        print dp.category'''
+            #if its already been categorized as a core point, skip to the next datapoint
+            if dp.category == CORE:
+                continue
+
+            #if its not a core point, its uncategorized at this point, so examine
+            #the distances from other points
+            for distance_tuple in dp.distance_list:
+                dist = distance_tuple[0]
+                adj_point = distance_tuple[1]
+
+                #if its within eps of another core point break out as we can categorize it
+                if (dist <= eps) and (adj_point.category == CORE):
+                    dp.category = BORDER
+                    break
 
 
-    print "Removing Noise Points..."
-    #Now lets remove the noise points from consideration
-    flagged_for_removal = []
-    for dp in dp_list:
-        if dp.category == NOISE:
-            flagged_for_removal.append(dp)
 
-    print len(flagged_for_removal)
-    for item in flagged_for_removal:
-        dp_list.remove(item)
+        print "Calculating Noise Points..."
+        #finally label all the noise points (any point not already flagged as core or border)
+        for dp in dp_list:
+            if dp.category == UNCATEGORIZED:
+                dp.category = NOISE
 
-    #DEBUG
-    '''for dp in dp_list:
-
-        if dp.category==NOISE:
+        #DEBUG
+        '''for dp in dp_list:
             print "-----"
             print dp.loc
             print dp.category'''
 
-    print "Linking Core Points..."
-    #create edges between all core points within eps of one another
-    for dp in dp_list:
-        if dp.category == CORE:
-            for distance_tuple in dp.distance_list:
 
-                dist = distance_tuple[0]
-                adj_point = distance_tuple[1]
+        print "Removing Noise Points..."
+        #Now lets remove the noise points from consideration
+        flagged_for_removal = []
+        for dp in dp_list:
+            if dp.category == NOISE:
+                flagged_for_removal.append(dp)
 
-                #don't create an edge to yourself
-                if adj_point == dp:
-                    continue
+        print len(flagged_for_removal)
+        for item in flagged_for_removal:
+            dp_list.remove(item)
 
-                #if its within eps of another core point, create an edge to that point
-                #don't worry about reciprocating it as it will be done
-                #on another iteration of the loop
-                if (dist <= eps) and (adj_point.category == CORE):
-                    dp.adjacency_list.append(adj_point)
+        #DEBUG
+        '''for dp in dp_list:
 
-        elif dp.category == NOISE:
-            print "WARNING: Found a noise point that shouldn't be there..."
-            print "Exiting..."
-            exit()
-        else:
-            continue
+            if dp.category==NOISE:
+                print "-----"
+                print dp.loc
+                print dp.category'''
 
-    #DEBUG
-    '''for dp in dp_list:
-        print "-----"
-        print "Location",dp.loc
-        print "Category:",dp.category
-        for adj_point in dp.adjacency_list:
-            print "     Adj Point Loc:",adj_point.loc
-            print "     Adj Point Cat:",adj_point.category
-            print ""
-        print " "
+        print "Linking Core Points..."
+        #create edges between all core points within eps of one another
+        for dp in dp_list:
+            if dp.category == CORE:
+                for distance_tuple in dp.distance_list:
 
-    exit()'''
+                    dist = distance_tuple[0]
+                    adj_point = distance_tuple[1]
 
+                    #don't create an edge to yourself
+                    if adj_point == dp:
+                        continue
 
+                    #if its within eps of another core point, create an edge to that point
+                    #don't worry about reciprocating it as it will be done
+                    #on another iteration of the loop
+                    if (dist <= eps) and (adj_point.category == CORE):
+                        dp.adjacency_list.append(adj_point)
 
-    print "Identifying connected componenets (labeling clusters)"
-    #basically, this is identifying the clusters
-    set_list = identify_connected_components(dp_list)
+            elif dp.category == NOISE:
+                print "WARNING: Found a noise point that shouldn't be there..."
+                print "Exiting..."
+                exit()
+            else:
+                continue
 
-    #DEBUG
-    '''for current_set in set_list:
-        print "----"
-        for element in current_set:
-            print element.loc'''
+        #DEBUG
+        '''for dp in dp_list:
+            print "-----"
+            print "Location",dp.loc
+            print "Category:",dp.category
+            for adj_point in dp.adjacency_list:
+                print "     Adj Point Loc:",adj_point.loc
+                print "     Adj Point Cat:",adj_point.category
+                print ""
+            print " "
 
-
-    #finally, add the border points to clusters
-    #The border points arbitrarily attach to the first core cluster within EPS
-    print "Connecting Border Points..."
-    for dp in dp_list:
-        if dp.category == BORDER:
-            add_border(dp, set_list, eps)
-
-
-
-    #now go through each set and find the smallest and largest value
-    #this wil become the cluster bounds that we use
-    cluster_list=[]
-
-    print "Outputting as 'gap' estimations..."
-    for current_set in set_list:
-        largest_val = 0
-        smallest_val = 999999999999
-
-        for dp in current_set:
-
-            value = dp.loc
-
-            if value > largest_val:
-                largest_val = value
-
-            if value < smallest_val:
-                smallest_val = value
-
-
-        tuple=(smallest_val, largest_val)
-
-        cluster_list.append(tuple)
+        exit()'''
 
 
 
-    return cluster_list
+        print "Identifying connected componenets (labeling clusters)"
+        #basically, this is identifying the clusters
+        set_list = identify_connected_components(dp_list)
+
+        #DEBUG
+        '''for current_set in set_list:
+            print "----"
+            for element in current_set:
+                print element.loc'''
+
+
+        #finally, add the border points to clusters
+        #The border points arbitrarily attach to the first core cluster within EPS
+        print "Connecting Border Points..."
+        for dp in dp_list:
+            if dp.category == BORDER:
+                add_border(dp, set_list, eps)
+
+
+
+        #now go through each set and find the smallest and largest value
+        #this wil become the cluster bounds that we use
+        cluster_list=[]
+
+        print "Outputting as 'gap' estimations..."
+        for current_set in set_list:
+            largest_val = 0
+            smallest_val = 999999999999
+
+            for dp in current_set:
+
+                value = dp.loc
+
+                if value > largest_val:
+                    largest_val = value
+
+                if value < smallest_val:
+                    smallest_val = value
+
+
+            tuple=(smallest_val, largest_val)
+
+            cluster_list.append(tuple)
+
+
+
+        return cluster_list
 
 #returns a list of sets that represent the connected components (clusters)
 #Uses depth first search, ONLY RUNS ON CORE POINTS	

@@ -181,11 +181,65 @@ class DataPointCluster:
 
         self.data_list = []
 
-    def db_scan(self):
+    def db_scan(self, eps, nhood_size):
         """
         Run the DB Scan clustering algorithm
         """
-        pass
+
+        print "Calculating Core Points..."
+        for dp in self.data_list:
+            count_within_eps = 0
+
+            # grab the ID of one dimension, which we then traverse and
+            # grab the distance to everybody else relative to that point
+            compare_from_id = dp.id
+
+            for compare_to_id in range(self.id_counter):
+
+                if compare_to_id == compare_from_id:
+                    continue
+
+                distance = self.distance_matrix[compare_from_id][compare_to_id]
+
+                if distance <= eps:
+                    count_within_eps += 1
+
+                if count_within_eps >= nhood_size:
+                    dp.category = CORE
+                    break
+
+
+        #Next, identify all the border points-that is, points that are not core, but
+        #are within eps of at least one core point
+        print "Calculating Border Points..."
+        for dp in self.data_list:
+
+            #if its already been categorized as a core or border point, skip to the next datapoint
+            if dp.category == CORE or dp.category == BORDER:
+                continue
+
+            # grab the ID of one dimension, which we then traverse and
+            # grab the distance to everybody else relative to that point
+            compare_from_id = dp.id
+
+            for compare_to_id in range(self.id_counter):
+                distance = self.distance_matrix[compare_from_id][compare_to_id]
+
+                #if its within eps of another core point break out as we can categorize it
+                if (distance <= eps) and (self.data_list[compare_to_id].category == CORE):
+                    dp.category = BORDER
+                    break
+
+        print "Calculating Noise Points..."
+        #finally label all the noise points (any point not already flagged as core or border)
+        for dp in self.data_list:
+            if dp.category == UNCATEGORIZED:
+                dp.category = NOISE
+
+        # Okay, now everyone is labeled, but because Im doing the lazy, innefficient approach, now
+        # we run a graph algorithm to actually glom these together into identifable clusters
+
+
 
     def output_clusters(self):
         """

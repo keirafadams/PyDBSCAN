@@ -64,6 +64,7 @@ def calc_distance(point_a, point_b):
 
     return dist
 
+#TODO add check for non-tuple inputs
 class DataPoint:
     """
     Heavy weight datapoint class. Meant to be clear and easy-ish to use,
@@ -104,7 +105,7 @@ class DataPoint:
         self.parent = -1
         self.time = 0
 
-
+# TODO, make generic dp cluster class, subclass for additional clusterings like k-means
 class DataPointCluster:
     """
     Stores our datapoints in a handy dandy central location with
@@ -116,6 +117,7 @@ class DataPointCluster:
         self.dimensionality = None
         self.distance_matrix = None
         self.id_counter = 0
+        self.clusters = None
 
     def add_datapoint(self, datapoint):
         """
@@ -153,7 +155,8 @@ class DataPointCluster:
 
         # calculate size of, and create, empty distance matrix
         num_dp = len(self.data_list)
-        self.distance_matrix = np.zeros(num_dp, num_dp)
+
+        self.distance_matrix = np.zeros((num_dp, num_dp))
 
         # inefficient, n2, redundant work, but should be functional
         for compare_from in self.data_list:
@@ -164,6 +167,7 @@ class DataPointCluster:
                 dist = calc_distance(point_a, point_b)
                 self.distance_matrix[compare_from.id][compare_to.id] = dist
 
+        print self.distance_matrix
 
     def clear_distance_matrix(self):
         """
@@ -264,7 +268,7 @@ class DataPointCluster:
         print "Identifying connected componenets (labeling clusters)"
         #basically, this is identifying the clusters
         set_list = identify_connected_components(self.data_list)
-
+        print set_list
 
         #finally, add the border points to clusters
         #The border points arbitrarily attach to the first core cluster within EPS
@@ -273,11 +277,20 @@ class DataPointCluster:
             if dp.category == BORDER:
                 add_border(dp, set_list, eps)
 
-    def output_clusters(self):
+        self.clusters = set_list
+
+    def print_clusters(self):
         """
-        Returns a list of lists, each list is a cluster
+        Prints out the clusters, assumes they're stored in self.clusters
         """
-        pass
+
+        #TODO, specialized exceptions
+        if None:
+            raise Exception("Clusters is empty!")
+
+        # TODO pretty print
+        for cluster in self.clusters:
+            print cluster
 
 
 #returns a list of sets that represent the connected components (clusters)
@@ -344,4 +357,19 @@ def add_border(border_point, set_list, eps):
 
 
 
+if __name__ == "__main__":
 
+    # TODO, move to unit set framework
+    dp_1 = DataPoint((1,))
+    dp_2 = DataPoint((2,))
+    dp_3 = DataPoint((8,))
+    dp_4 = DataPoint((9,))
+
+    test1d = DataPointCluster()
+    test1d.add_datapoint(dp_1)
+    test1d.add_datapoint(dp_2)
+    test1d.add_datapoint(dp_3)
+    test1d.add_datapoint(dp_4)
+    test1d.create_distance_matrix()
+    test1d.db_scan(3,2)
+    test1d.print_clusters()

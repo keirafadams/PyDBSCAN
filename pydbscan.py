@@ -70,13 +70,13 @@ class DataPoint:
     Heavy weight datapoint class. Meant to be clear and easy-ish to use,
     not efficient :p.
     """
-    def __init__(self, location):
+    def __init__(self, location, id=None):
         """
         :param location: tuple describing the location on a plane, can be arbitrary dimensions
         """
 
         self.loc = location
-        self.id = None
+        self.id = id
 
         #What type of datapoint is it, based on DBSCAN categorizations
         self.category = UNCATEGORIZED
@@ -134,8 +134,10 @@ class DataPointCluster:
                             % (len(datapoint.loc), self.dimensionality))
 
 
-        # Assign a unique ID to the data point
-        datapoint.id = self.id_counter
+        # Assign a unique ID to the data point, or the counter value
+        # TODO change to uuid so it will never conflict with manuall IDs
+        if datapoint.id is None:
+            datapoint.id = self.id_counter
         self.id_counter += 1
 
         self.data_list.append(datapoint)
@@ -204,11 +206,16 @@ class DataPointCluster:
                     continue
 
                 distance = self.distance_matrix[compare_from_id][compare_to_id]
+                print "----"
+                print compare_from_id
+                print compare_to_id
+                print distance
 
                 if distance <= eps:
                     count_within_eps += 1
 
                 if count_within_eps >= nhood_size:
+                    print "CORE POINT"
                     dp.category = CORE
                     break
 
@@ -289,8 +296,13 @@ class DataPointCluster:
             raise Exception("Clusters is empty!")
 
         # TODO pretty print
+        # TODO label clusters
+        counter = 0
         for cluster in self.clusters:
-            print cluster
+            print "Cluster: %d" % counter
+            for dp in cluster:
+                print dp.id
+            counter += 1
 
 
 #returns a list of sets that represent the connected components (clusters)
@@ -362,14 +374,20 @@ if __name__ == "__main__":
     # TODO, move to unit set framework
     dp_1 = DataPoint((1,))
     dp_2 = DataPoint((2,))
-    dp_3 = DataPoint((8,))
-    dp_4 = DataPoint((9,))
+    dp_3 = DataPoint((3,))
+    dp_4 = DataPoint((8,))
+    dp_5 = DataPoint((9,))
+    dp_6 = DataPoint((10,))
+    dp_7 = DataPoint((99,))
 
     test1d = DataPointCluster()
     test1d.add_datapoint(dp_1)
     test1d.add_datapoint(dp_2)
     test1d.add_datapoint(dp_3)
     test1d.add_datapoint(dp_4)
+    test1d.add_datapoint(dp_5)
+    test1d.add_datapoint(dp_6)
+    test1d.add_datapoint(dp_7)
     test1d.create_distance_matrix()
     test1d.db_scan(3,2)
     test1d.print_clusters()

@@ -42,8 +42,7 @@ BLACK = 12
 
 def calc_distance(point_a, point_b):
     """
-    calculates euclidean distance between two arbitrary points of n dimensions
-    Yes, I know others do it well, but this is my stupid learning project, dammit.
+    Calculates euclidean distance between two arbitrary points of n dimensions
 
     :param point_a: tuple describing point in space
     :param point_b: tuple describing point in space
@@ -55,7 +54,6 @@ def calc_distance(point_a, point_b):
     if len(point_a) != len(point_b):
         raise Exception("Cannot calculate distance between points of"
                         "differing dimensionality")
-
 
     running_sum = 0
     for index in range(len(point_a)):
@@ -76,7 +74,8 @@ class DataPoint:
         """
 
         self.loc = location
-        self.id = id
+        self.id = None
+        self.user_assigned_id = id
 
         #What type of datapoint is it, based on DBSCAN categorizations
         self.category = UNCATEGORIZED
@@ -133,11 +132,9 @@ class DataPointCluster:
                             "dimension %s, but data list is of dimension %s  "
                             % (len(datapoint.loc), self.dimensionality))
 
-
         # Assign a unique ID to the data point, or the counter value
-        # TODO change to uuid so it will never conflict with manuall IDs
-        if datapoint.id is None:
-            datapoint.id = self.id_counter
+        # used in indexing into the distance matrix
+        datapoint.id = self.id_counter
         self.id_counter += 1
 
         self.data_list.append(datapoint)
@@ -258,7 +255,8 @@ class DataPointCluster:
                 for compare_to_id in range(self.id_counter):
                     distance = self.distance_matrix[compare_from_id][compare_to_id]
 
-
+                    #TODO, change this so it can handle multiple legit points
+                    # at the same location
                     #don't create an edge to yourself
                     if distance == 0:
                         continue
@@ -308,9 +306,10 @@ class DataPointCluster:
 #returns a list of sets that represent the connected components (clusters)
 #Uses depth first search, ONLY RUNS ON CORE POINTS	
 def identify_connected_components(dp_list):
-
-
-    first_set=True
+    """
+    Identifying the connected components (i.e. clusters) via a depth first
+    search.
+    """
     set_list = []
 
     for datapoint in dp_list:
